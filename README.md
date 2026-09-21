@@ -1,8 +1,6 @@
-# Guillou–Quisquater Digital Signature Scheme in Z\*<sub>n</sub>
+# Guillou - Quisquater Digital Signature in Z\*<sub>n</sub>
 
-> **Modern Cryptographic Techniques** project
-
-Java implementation of the **Guillou–Quisquater** identity-based digital signature scheme, together with a demonstration of the protocol and a comparative benchmark against **RSA**.
+Java implementation of the **Guillou–Quisquater** (GQ) identity-based digital signature scheme, together with a demonstration of the protocol and a comparative benchmark against **RSA**.
 
 ![Java](https://img.shields.io/badge/Java-11%2B-orange?logo=openjdk&logoColor=white)
 ![License](https://img.shields.io/badge/license-Academic-blue)
@@ -274,12 +272,12 @@ Main class with two constructors:
 
 **Main methods:**
 
-| Method                                                          | Description                                                                                       |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `generateCertificate(String identity)`                          | Computes `I = H(identity) mod n` and the certificate `J = I^s mod n` (CA only)                    |
-| `sign(String message, String identity, BigInteger certificate)` | Picks random `r ∈ Z*n`, `T = r^v mod n`, `d = H(M ‖ T) mod 2^k`, `y = r·J^d mod n`               |
-| `verify(String message, GQSignatureData signature)`             | Recomputes `I`, `T' = y^v · I^(-d) mod n`, `d' = H(M ‖ T') mod 2^k` and checks `d' == d`          |
-| `getN()`, `getV()`, `getK()`                                    | Getters for the public parameters                                                                 |
+| Method                                                          | Description                                                                              |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `generateCertificate(String identity)`                          | Computes `I = H(identity) mod n` and the certificate `J = I^s mod n` (CA only)           |
+| `sign(String message, String identity, BigInteger certificate)` | Picks random `r ∈ Z*n`, `T = r^v mod n`, `d = H(M ‖ T) mod 2^k`, `y = r·J^d mod n`       |
+| `verify(String message, GQSignatureData signature)`             | Recomputes `I`, `T' = y^v · I^(-d) mod n`, `d' = H(M ‖ T') mod 2^k` and checks `d' == d` |
+| `getN()`, `getV()`, `getK()`                                    | Getters for the public parameters                                                        |
 
 The hash function `H` is **SHA-256**; the challenge is reduced to `k` bits.
 
