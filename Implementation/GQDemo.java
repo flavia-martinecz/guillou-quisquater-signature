@@ -1,175 +1,142 @@
 import java.math.BigInteger;
 
 /**
- * Demonstration of the Guillou-Quisquater scheme
- * Complete example with 2 users (Alice and Bob)
+ * Demonstration program for the Guillou-Quisquater (GQ) signature scheme.
+ *
+ * Demonstrated flow:
+ *  1. System setup: the Certification Authority generates the public parameters (n, v, k).
+ *  2. User registration: the authority issues certificates for Alice and Bob,
+ *     derived from their identities.
+ *  3. Public parameter distribution: Alice and Bob receive (n, v, k).
+ *  4. Message signing (Alice): Alice signs a message using her certificate.
+ *  5. Signature verification: Bob verifies Alice's signature (expected: VALID).
+ *  6. Integrity test: the same signature is verified against a tampered message
+ *     (expected: INVALID).
+ *  7. Authenticity test: Alice's signature is presented with Bob's identity
+ *     (expected: INVALID).
+ *  8. Message signing (Bob): Bob signs his own message.
+ *  9. Signature verification: Alice verifies Bob's signature (expected: VALID).
+ *
+ * Finally, statistics about the modulus, certificate and signature sizes are printed.
  */
 public class GQDemo {
 
     public static void main(String[] args) {
         try {
-            printSeparator();
-            System.out.println("GUILLOU-QUISQUATER SCHEME DEMONSTRATION");
-            printSeparator();
+            System.out.println("=== GUILLOU-QUISQUATER SCHEME DEMONSTRATION ===\n");
 
-            // ==================== STEP 1: SYSTEM SETUP ====================
-            System.out.println("\n[STEP 1] SYSTEM SETUP - Certification Authority (CA)");
-            System.out.println("-".repeat(70));
+            System.out.println("Step 1: SYSTEM SETUP (Certification Authority)");
+            System.out.println("-".repeat(60));
 
-            int keySize = 1024;  // bits
-            int securityParameter = 256;  // k = 256 bits (SHA-256)
+            int bitLength = 1024;
+            int securityParam = 160;
 
-            System.out.println("CA is generating system parameters...");
-            GQSignature authority = new GQSignature(keySize, securityParameter);
+            GQSignature authority = new GQSignature(bitLength, securityParam);
 
-            System.out.println("PUBLIC parameters generated:");
-            System.out.println("  n (modulus):            " + authority.getN().bitLength() + " bits");
-            System.out.println("     Value (first 40 hex): " + authority.getN().toString(16).substring(0, 40) + "...");
-            System.out.println("  v (public exponent):    " + authority.getV());
-            System.out.println("  k (security parameter): " + authority.getK() + " bits");
+            System.out.println("Generated public parameters:");
+            System.out.println("  n (modulus): " + authority.getN().bitLength() + " bits");
+            System.out.println("  v (public exponent): " + authority.getV());
+            System.out.println("  k (security parameter): " + authority.getK());
+            System.out.println();
 
-            // ==================== STEP 2: USER REGISTRATION ====================
-            System.out.println("\n[STEP 2] USER REGISTRATION");
-            System.out.println("-".repeat(70));
+            System.out.println("Step 2: USER REGISTRATION");
+            System.out.println("-".repeat(60));
 
-            String idAlice = "alice@company.com";
-            String idBob = "bob@company.com";
+            String aliceId = "alice@company.com";
+            String bobId = "bob@company.com";
 
-            System.out.println("Generating certificates for users...");
+            System.out.println("Generating user certificates...");
+            BigInteger aliceCert = authority.generateCertificate(aliceId);
+            BigInteger bobCert = authority.generateCertificate(bobId);
 
-            BigInteger certAlice = authority.generateCertificate(idAlice);
-            System.out.println("  Alice (" + idAlice + ")");
-            System.out.println("    Certificate: " + certAlice.bitLength() + " bits");
-            System.out.println("    Value (first 40 hex): " + certAlice.toString(16).substring(0, 40) + "...");
+            System.out.println("  Alice (" + aliceId + "):");
+            System.out.println("    Certificate: " + aliceCert.bitLength() + " bits");
+            System.out.println("  Bob (" + bobId + "):");
+            System.out.println("    Certificate: " + bobCert.bitLength() + " bits");
+            System.out.println();
 
-            BigInteger certBob = authority.generateCertificate(idBob);
-            System.out.println("  Bob (" + idBob + ")");
-            System.out.println("    Certificate: " + certBob.bitLength() + " bits");
-            System.out.println("    Value (first 40 hex): " + certBob.toString(16).substring(0, 40) + "...");
-
-            // ==================== STEP 3: USERS RECEIVE PARAMETERS ====================
-            System.out.println("\n[STEP 3] PUBLIC PARAMETER DISTRIBUTION");
-            System.out.println("-".repeat(70));
+            System.out.println("Step 3: PUBLIC PARAMETER DISTRIBUTION");
+            System.out.println("-".repeat(60));
 
             GQSignature alice = new GQSignature(authority.getN(), authority.getV(), authority.getK());
             GQSignature bob = new GQSignature(authority.getN(), authority.getV(), authority.getK());
 
             System.out.println("Alice and Bob have received the public parameters (n, v, k)");
-            System.out.println("They can now sign messages and verify signatures!");
+            System.out.println();
 
-            // ==================== STEP 4: ALICE SIGNS ====================
-            System.out.println("\n[STEP 4] ALICE SIGNS A MESSAGE");
-            System.out.println("-".repeat(70));
+            System.out.println("Step 4: MESSAGE SIGNING (Alice)");
+            System.out.println("-".repeat(60));
 
-            String message1 = "Contract: Transfer 1000 EUR to Bob";
+            String message1 = "Contract: Transfer of 1000 EUR to Bob";
             System.out.println("Message: \"" + message1 + "\"");
-            System.out.println("\nAlice is signing...");
 
-            GQSignature.Signature sigAlice = alice.sign(message1, idAlice, certAlice);
+            GQSignature.GQSignatureData aliceSignature = alice.sign(message1, aliceId, aliceCert);
 
-            System.out.println("Generated signature:");
-            System.out.println("  Challenge (d): " + sigAlice.d.bitLength() + " bits");
-            System.out.println("    Value (hex): " + sigAlice.d.toString(16));
-            System.out.println("  Response (y):  " + sigAlice.y.bitLength() + " bits");
-            System.out.println("    Value (first 40 hex): " + sigAlice.y.toString(16).substring(0, 40) + "...");
-            System.out.println("  Identity:      " + sigAlice.identity);
+            System.out.println("\nGenerated signature:");
+            System.out.println("  Challenge (d): " + aliceSignature.d.bitLength() + " bits");
+            System.out.println("  Response (y): " + aliceSignature.y.bitLength() + " bits");
+            System.out.println("  Identity: " + aliceSignature.identity);
+            System.out.println();
 
-            // ==================== STEP 5: BOB VERIFIES ====================
-            System.out.println("\n[STEP 5] BOB VERIFIES ALICE'S SIGNATURE");
-            System.out.println("-".repeat(70));
+            System.out.println("Step 5: SIGNATURE VERIFICATION (Bob verifies Alice's signature)");
+            System.out.println("-".repeat(60));
 
-            boolean valid1 = bob.verify(message1, sigAlice);
-            System.out.println("Verification result: " + (valid1 ? "VALID" : "INVALID"));
+            boolean valid1 = bob.verify(message1, aliceSignature);
+            System.out.println("Verification result: " + (valid1 ? "[OK] VALID" : "[FAIL] INVALID"));
+            System.out.println();
 
-            if (!valid1) {
-                System.out.println("ERROR: The signature should be valid!");
-                return;
-            }
+            System.out.println("Step 6: INTEGRITY TEST - Tampered Message");
+            System.out.println("-".repeat(60));
 
-            // ==================== STEP 6: INTEGRITY TEST ====================
-            System.out.println("\n[STEP 6] INTEGRITY TEST - Modified Message");
-            System.out.println("-".repeat(70));
+            String tamperedMessage = "Contract: Transfer of 9000 EUR to Bob";
+            System.out.println("Tampered message: \"" + tamperedMessage + "\"");
 
-            String modifiedMessage = "Contract: Transfer 9000 EUR to Bob";  // MODIFIED!
-            System.out.println("Modified message: \"" + modifiedMessage + "\"");
+            boolean valid2 = bob.verify(tamperedMessage, aliceSignature);
+            System.out.println("Verification result: " + (valid2 ? "[OK] VALID" : "[FAIL] INVALID (as expected)"));
+            System.out.println();
 
-            boolean valid2 = bob.verify(modifiedMessage, sigAlice);
-            System.out.println("Verification result: " + (valid2 ? "VALID" : "INVALID"));
+            System.out.println("Step 7: AUTHENTICITY TEST - Forged Identity");
+            System.out.println("-".repeat(60));
 
-            if (valid2) {
-                System.out.println("ERROR: The modified message should be invalid!");
-                return;
-            }
-            System.out.println("Correct! The modified message was detected.");
+            GQSignature.GQSignatureData forgedSignature =
+                new GQSignature.GQSignatureData(aliceSignature.d, aliceSignature.y, bobId);
 
-            // ==================== STEP 7: AUTHENTICITY TEST ====================
-            System.out.println("\n[STEP 7] AUTHENTICITY TEST - Fake Identity");
-            System.out.println("-".repeat(70));
+            System.out.println("Alice's signature with Bob's identity (forgery)");
+            boolean valid3 = bob.verify(message1, forgedSignature);
+            System.out.println("Verification result: " + (valid3 ? "[OK] VALID" : "[FAIL] INVALID (as expected)"));
+            System.out.println();
 
-            GQSignature.Signature fakeSig =
-                new GQSignature.Signature(sigAlice.d, sigAlice.y, idBob);  // Fake identity!
-
-            System.out.println("Attempt: Alice's signature with Bob's identity");
-            boolean valid3 = bob.verify(message1, fakeSig);
-            System.out.println("Verification result: " + (valid3 ? "VALID" : "INVALID"));
-
-            if (valid3) {
-                System.out.println("ERROR: The fake identity should be invalid!");
-                return;
-            }
-            System.out.println("Correct! The fake identity was detected.");
-
-            // ==================== STEP 8: BOB SIGNS ====================
-            System.out.println("\n[STEP 8] BOB SIGNS A MESSAGE");
-            System.out.println("-".repeat(70));
+            System.out.println("Step 8: MESSAGE SIGNING (Bob)");
+            System.out.println("-".repeat(60));
 
             String message2 = "I confirm receipt of 1000 EUR from Alice";
             System.out.println("Message: \"" + message2 + "\"");
-            System.out.println("\nBob is signing...");
 
-            GQSignature.Signature sigBob = bob.sign(message2, idBob, certBob);
+            GQSignature.GQSignatureData bobSignature = bob.sign(message2, bobId, bobCert);
 
-            System.out.println("Signature generated by Bob:");
-            System.out.println("  Challenge (d): " + sigBob.d.bitLength() + " bits");
-            System.out.println("    Value (hex): " + sigBob.d.toString(16));
-            System.out.println("  Response (y):  " + sigBob.y.bitLength() + " bits");
-            System.out.println("    Value (first 40 hex): " + sigBob.y.toString(16).substring(0, 40) + "...");
+            System.out.println("\nSignature generated by Bob");
+            System.out.println("  Challenge (d): " + bobSignature.d.bitLength() + " bits");
+            System.out.println("  Response (y): " + bobSignature.y.bitLength() + " bits");
+            System.out.println();
 
-            // ==================== STEP 9: ALICE VERIFIES ====================
-            System.out.println("\n[STEP 9] ALICE VERIFIES BOB'S SIGNATURE");
-            System.out.println("-".repeat(70));
+            System.out.println("Step 9: SIGNATURE VERIFICATION (Alice verifies Bob's signature)");
+            System.out.println("-".repeat(60));
 
-            boolean valid4 = alice.verify(message2, sigBob);
-            System.out.println("Verification result: " + (valid4 ? "VALID" : "INVALID"));
+            boolean valid4 = alice.verify(message2, bobSignature);
+            System.out.println("Verification result: " + (valid4 ? "[OK] VALID" : "[FAIL] INVALID"));
+            System.out.println();
 
-            if (!valid4) {
-                System.out.println("ERROR: Bob's signature should be valid!");
-                return;
-            }
-
-            // ==================== FINAL STATISTICS ====================
-            printSeparator();
-            System.out.println("FINAL STATISTICS");
-            printSeparator();
-
-            int signatureSize = (sigAlice.d.bitLength() + sigAlice.y.bitLength()) / 8;
-
-            System.out.println("Modulus size (n):         " + keySize + " bits");
-            System.out.println("Certificate size:         " + certAlice.bitLength() + " bits");
-            System.out.println("Signature size:           ~" + signatureSize + " bytes");
-            System.out.println("Security parameter (k):   " + securityParameter + " bits");
-
-            printSeparator();
-            System.out.println("ALL TESTS EXECUTED SUCCESSFULLY!");
-            printSeparator();
+            System.out.println("=== STATISTICS ===");
+            System.out.println("-".repeat(60));
+            System.out.println("Modulus size (n): " + bitLength + " bits");
+            System.out.println("Certificate size: " + aliceCert.bitLength() + " bits");
+            System.out.println("Signature size: ~" +
+                (aliceSignature.d.bitLength() + aliceSignature.y.bitLength()) / 8 + " bytes");
+            System.out.println("\nAll tests completed successfully!");
 
         } catch (Exception e) {
-            System.err.println("\nERROR: " + e.getMessage());
+            System.err.println("Error: " + e.getMessage());
             e.printStackTrace();
         }
-    }
-
-    private static void printSeparator() {
-        System.out.println("\n" + "=".repeat(70));
     }
 }

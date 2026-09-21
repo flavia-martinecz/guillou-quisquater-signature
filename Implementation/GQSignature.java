@@ -1,45 +1,68 @@
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.nio.charset.StandardCharsets;
 
 /**
- * Project topic:
- * Guillou-Quisquater identity-based digital signature scheme (in Zn)
+ * Implementation of the identity-based Guillou-Quisquater (GQ) digital signature
+ * scheme, operating in Zn.
  *
- * @author Flavia Martinecz
- * @university Politehnica University of Timisoara
- * @course SISC Master's - Modern Cryptographic Techniques - year I, semester I
+ * Public system parameters:
+ *  - n: RSA modulus (n = p * q)
+ *  - v: public exponent, coprime with φ(n) (starting from 65537)
+ *  - k: security parameter (bit size of the challenge)
+ *
+ * Private keys of the certification authority:
+ *  - p, q: the prime factors of n
+ *  - s: private exponent, s * v ≡ 1 (mod φ(n))
+ *
+ * Constructors:
+ *  - GQSignature(bitLength, securityParameter): for the authority; generates the
+ *    system parameters (p, q, n, φ(n), v, s).
+ *  - GQSignature(n, v, k): for users; uses the existing public parameters.
+ *
+ * Operations:
+ *  - generateCertificate(identity): executed by the authority; I = H(identity) mod n,
+ *    and the certificate is J = I^s mod n.
+ *  - sign(message, identity, certificate):
+ *      1. choose a random r in Zn*
+ *      2. commitment T = r^v mod n
+ *      3. challenge d = H(M || T) mod 2^k
+ *      4. response y = r * J^d mod n
+ *    The signature is (d, y, identity).
+ *  - verify(message, signature):
+ *      1. recompute I = H(identity) mod n
+ *      2. T' = y^v * I^(-d) mod n
+ *      3. d' = H(M || T') mod 2^k
+ *      4. the signature is valid if d' == d
+ *
+ * Helper functions: hashToInteger (SHA-256 over the identity, as a BigInteger) and
+ * hashChallenge (SHA-256 over message || commitment, reduced to k bits).
+ *
+ * GQSignatureData is an immutable class that stores the signature: the challenge d,
+ * the response y and the signer's identity.
  */
 public class GQSignature {
 
-    // PUBLIC parameters - known to everyone
-    private BigInteger n;  // RSA modulus: n = p × q
-    private BigInteger v;  // Public exponent (65537)
-    private int k;         // Challenge size (256 bits)
+    private BigInteger n;
+    private BigInteger v;
+    private int k;
 
-    // SECRET parameters - CA only
-    private BigInteger p, q;  // Prime factors
-    private BigInteger s;     // Private exponent: s = v^-1 mod φ(n)
+    private BigInteger p;
+    private BigInteger q;
+    private BigInteger s;
 
-    // Utilities
     private SecureRandom random;
     private MessageDigest hash;
 
-    /**
-     * Constructor for the Certification Authority (CA)
-     * Generates all system parameters
-     */
-    public GQSignature(int bitLength, int k) throws Exception {
-        this.k = k;
+    public GQSignature(int bitLength, int securityParameter) throws Exception {
+        this.k = securityParameter;
         this.random = new SecureRandom();
         this.hash = MessageDigest.getInstance("SHA-256");
-        generateParameters(bitLength);
+
+        generateSystemParameters(bitLength);
     }
 
-    /**
-     * Constructor for Users
-     * Uses existing public parameters
-     */
     public GQSignature(BigInteger n, BigInteger v, int k) throws Exception {
         this.n = n;
         this.v = v;
@@ -48,143 +71,90 @@ public class GQSignature {
         this.hash = MessageDigest.getInstance("SHA-256");
     }
 
-    /**
-     * STEP 1: Generate system parameters (CA only)
-     * Generates: p, q, n, v, s
-     */
-    private void generateParameters(int bitLength) {
-        // Generate two large prime factors
+    private void generateSystemParameters(int bitLength) {
         p = BigInteger.probablePrime(bitLength / 2, random);
         q = BigInteger.probablePrime(bitLength / 2, random);
 
-        // Compute n = p × q
         n = p.multiply(q);
 
-        // Compute φ(n) = (p-1)(q-1)
         BigInteger phi = p.subtract(BigInteger.ONE).multiply(q.subtract(BigInteger.ONE));
 
-        // Choose v = 65537 (RSA standard)
         v = BigInteger.valueOf(65537);
 
-        // Compute s = v^-1 mod φ(n)
+        while (!v.gcd(phi).equals(BigInteger.ONE)) {
+            v = v.add(BigInteger.TWO);
+        }
+
         s = v.modInverse(phi);
     }
 
-    /**
-     * STEP 2: Generate certificate for a user (CA only)
-     * Input: identity (e.g. "alice@company.com")
-     * Output: J = secret certificate
-     */
     public BigInteger generateCertificate(String identity) {
-        // I = H(identity) mod n
-        BigInteger I = hashToBigInteger(identity).mod(n);
+        BigInteger I = hashToInteger(identity).mod(n);
 
-        // J = I^s mod n (the secret certificate)
         BigInteger J = I.modPow(s, n);
 
         return J;
     }
 
-    /**
-     * STEP 3: Sign a message
-     * Input: message, identity, certificate
-     * Output: signature (d, y, identity)
-     */
-    public Signature sign(String message, String identity, BigInteger certificate) {
-        // 1. Choose random r from Zn*
-        BigInteger r = generateRandom();
+    public GQSignatureData sign(String message, String identity, BigInteger certificate) {
+        BigInteger r;
+        do {
+            r = new BigInteger(n.bitLength(), random);
+        } while (r.compareTo(n) >= 0 || r.gcd(n).compareTo(BigInteger.ONE) != 0);
 
-        // 2. Compute commitment: T = r^v mod n
         BigInteger T = r.modPow(v, n);
 
-        // 3. Compute challenge: d = H(message || T) mod 2^k
-        BigInteger d = computeChallenge(message, T);
+        BigInteger d = hashChallenge(message, T);
 
-        // 4. Compute response: y = r × J^d mod n
-        BigInteger Jd = certificate.modPow(d, n);
-        BigInteger y = r.multiply(Jd).mod(n);
+        BigInteger y = r.multiply(certificate.modPow(d, n)).mod(n);
 
-        return new Signature(d, y, identity);
+        return new GQSignatureData(d, y, identity);
     }
 
-    /**
-     * STEP 4: Verify a signature
-     * Input: message, signature
-     * Output: true if valid, false otherwise
-     */
-    public boolean verify(String message, Signature sig) {
+    public boolean verify(String message, GQSignatureData signature) {
         try {
-            // 1. Recompute I = H(identity) mod n
-            BigInteger I = hashToBigInteger(sig.identity).mod(n);
+            BigInteger I = hashToInteger(signature.identity).mod(n);
 
-            // 2. Compute T' = y^v × I^(-d) mod n
-            BigInteger yv = sig.y.modPow(v, n);
-            BigInteger Id = I.modPow(sig.d, n);
+            BigInteger yv = signature.y.modPow(v, n);
+            BigInteger Id = I.modPow(signature.d, n);
             BigInteger IdInv = Id.modInverse(n);
             BigInteger TPrime = yv.multiply(IdInv).mod(n);
 
-            // 3. Recompute challenge: d' = H(message || T')
-            BigInteger dPrime = computeChallenge(message, TPrime);
+            BigInteger dPrime = hashChallenge(message, TPrime);
 
-            // 4. Check: d' == d
-            return dPrime.equals(sig.d);
+            return dPrime.equals(signature.d);
 
         } catch (Exception e) {
             return false;
         }
     }
 
-    // ========== HELPER FUNCTIONS ==========
-
-    /**
-     * Generates a random number r from Zn*
-     * Conditions: r < n and gcd(r, n) = 1
-     */
-    private BigInteger generateRandom() {
-        BigInteger r;
-        do {
-            r = new BigInteger(n.bitLength(), random);
-        } while (r.compareTo(n) >= 0 || !r.gcd(n).equals(BigInteger.ONE));
-        return r;
-    }
-
-    /**
-     * Hash a string to a BigInteger
-     */
-    private BigInteger hashToBigInteger(String text) {
+    private BigInteger hashToInteger(String data) {
         hash.reset();
-        byte[] hashBytes = hash.digest(text.getBytes());
+        byte[] hashBytes = hash.digest(data.getBytes(StandardCharsets.UTF_8));
         return new BigInteger(1, hashBytes);
     }
 
-    /**
-     * Compute challenge: d = H(message || T) mod 2^k
-     */
-    private BigInteger computeChallenge(String message, BigInteger T) {
+    private BigInteger hashChallenge(String message, BigInteger commitment) {
         hash.reset();
-        String combined = message + T.toString();
-        byte[] hashBytes = hash.digest(combined.getBytes());
+        String combined = message + commitment.toString();
+        byte[] hashBytes = hash.digest(combined.getBytes(StandardCharsets.UTF_8));
         BigInteger hashInt = new BigInteger(1, hashBytes);
 
-        // Reduce to k bits: hash mod 2^k
         BigInteger modulus = BigInteger.ONE.shiftLeft(k);
         return hashInt.mod(modulus);
     }
 
-    // Getters for public parameters
     public BigInteger getN() { return n; }
     public BigInteger getV() { return v; }
     public int getK() { return k; }
 
-    /**
-     * Class for storing a signature
-     */
-    public static class Signature {
-        public final BigInteger d;  // Challenge
-        public final BigInteger y;  // Response
+    public static class GQSignatureData {
+        public final BigInteger d;
+        public final BigInteger y;
         public final String identity;
 
-        public Signature(BigInteger d, BigInteger y, String identity) {
+        public GQSignatureData(BigInteger d, BigInteger y, String identity) {
             this.d = d;
             this.y = y;
             this.identity = identity;
@@ -192,8 +162,8 @@ public class GQSignature {
 
         @Override
         public String toString() {
-            return String.format("GQ Signature [d=%d bits, y=%d bits, ID=%s]",
-                d.bitLength(), y.bitLength(), identity);
+            return String.format("GQSignature[d=%s, y=%s, identity=%s]",
+                d.toString(16), y.toString(16), identity);
         }
     }
 }
