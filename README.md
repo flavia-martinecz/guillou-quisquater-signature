@@ -1,188 +1,188 @@
-# Schema de semnătură digitală Guillou–Quisquater în Z\*<sub>n</sub>
+# Guillou–Quisquater Digital Signature Scheme in Z\*<sub>n</sub>
 
-> Proiect **Tehnici Criptografice Moderne**
+> **Modern Cryptographic Techniques** project
 
-Implementare în Java a schemei de semnătură digitală bazată pe identitate **Guillou–Quisquater**, împreună cu o demonstrație a protocolului și un benchmark comparativ față de **RSA**.
+Java implementation of the **Guillou–Quisquater** identity-based digital signature scheme, together with a demonstration of the protocol and a comparative benchmark against **RSA**.
 
 ![Java](https://img.shields.io/badge/Java-8%2B-orange?logo=openjdk&logoColor=white)
 ![License](https://img.shields.io/badge/license-Academic-blue)
-![Status](https://img.shields.io/badge/status-finalizat-brightgreen)
+![Status](https://img.shields.io/badge/status-completed-brightgreen)
 
 ---
 
-## Cuprins
+## Table of Contents
 
-1. [Descrierea fișierelor](#1-descrierea-fișierelor)
-2. [Cerințe sistem](#2-cerințe-sistem)
-3. [Compilare](#3-compilare)
-4. [Rulare](#4-rulare)
-5. [Rezultate așteptate](#5-rezultate-așteptate)
-6. [Structura codului](#6-structura-codului)
+1. [File description](#1-file-description)
+2. [System requirements](#2-system-requirements)
+3. [Compilation](#3-compilation)
+4. [Running](#4-running)
+5. [Expected results](#5-expected-results)
+6. [Code structure](#6-code-structure)
 
 ---
 
-## 1. Descrierea fișierelor
+## 1. File description
 
-Proiectul conține **3 fișiere sursă Java** în directorul [`Implementare/`](Implementare/):
+The project contains **3 Java source files** in the [`Implementation/`](Implementation/) directory:
 
-| Fișier                                              | Rol                                                                                                    |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| [`GQSignature.java`](Implementare/GQSignature.java) | Implementarea principală a algoritmului GQ (generare parametri, certificare, semnare, verificare)      |
-| [`GQDemo.java`](Implementare/GQDemo.java)           | Demonstrație completă cu doi utilizatori (Alice și Bob). Include teste de integritate și autenticitate |
-| [`GQBenchmark.java`](Implementare/GQBenchmark.java) | Măsurători comparative de performanță **GQ vs RSA**. Testează chei de 1024 și 2048 biți                |
+| File                                                | Role                                                                                                     |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [`GQSignature.java`](Implementation/GQSignature.java) | Main implementation of the GQ algorithm (parameter generation, certification, signing, verification)     |
+| [`GQDemo.java`](Implementation/GQDemo.java)           | Complete demonstration with two users (Alice and Bob). Includes integrity and authenticity tests         |
+| [`GQBenchmark.java`](Implementation/GQBenchmark.java) | Comparative performance measurements **GQ vs RSA**. Tests 1024- and 2048-bit keys                        |
 
-În plus, în [`Docs/`](Docs/) se află referatul IEEE al proiectului:
+In addition, the project's IEEE paper is located in [`Docs/`](Docs/):
 [`GQ_Referat_IEEE.pdf`](Docs/GQ_Referat_IEEE.pdf).
 
 ---
 
-## 2. Cerințe sistem
+## 2. System requirements
 
-- **Java Development Kit (JDK) versiunea 8 sau mai nouă**
+- **Java Development Kit (JDK) version 8 or newer**
 
-Verificare versiune:
+Check the version:
 
 ```bash
 java -version
 javac -version
 ```
 
-Dacă `javac` nu este disponibil, instalați JDK-ul complet:
+If `javac` is not available, install the full JDK:
 
-| Sistem                | Instalare                                                         |
-| --------------------- | ----------------------------------------------------------------- |
-| Windows               | Descărcați de la [adoptium.net](https://adoptium.net/) sau Oracle |
-| Linux (Ubuntu/Debian) | `sudo apt install default-jdk`                                    |
-| macOS                 | `brew install openjdk`                                            |
+| System                | Installation                                                    |
+| --------------------- | --------------------------------------------------------------- |
+| Windows               | Download from [adoptium.net](https://adoptium.net/) or Oracle   |
+| Linux (Ubuntu/Debian) | `sudo apt install default-jdk`                                  |
+| macOS                 | `brew install openjdk`                                          |
 
 ---
 
-## 3. Compilare
+## 3. Compilation
 
-Deschideți un terminal în directorul [`Implementare/`](Implementare/) și rulați:
+Open a terminal in the [`Implementation/`](Implementation/) directory and run:
 
 ```bash
 javac *.java
 ```
 
-După compilare vor apărea fișierele `.class`:
+After compilation, the following `.class` files will appear:
 
 - `GQSignature.class`
-- `GQSignature$Semnatura.class` _(clasa internă pentru semnătură)_
+- `GQSignature$Signature.class` _(inner class for the signature)_
 - `GQDemo.class`
 - `GQBenchmark.class`
 
-> **Notă:** Fișierele `.class` sunt excluse din repository prin [`.gitignore`](.gitignore).
+> **Note:** The `.class` files are excluded from the repository via [`.gitignore`](.gitignore).
 
 ---
 
-## 4. Rulare
+## 4. Running
 
-### A) Demonstrația funcționalității
+### A) Functionality demonstration
 
 ```bash
 java GQDemo
 ```
 
-Va afișa:
+It will display:
 
-- Generarea parametrilor de sistem de către CA
-- Înregistrarea utilizatorilor Alice și Bob
-- Semnarea unui mesaj de către Alice
-- Verificarea semnăturii de către Bob
-- Test cu mesaj modificat (trebuie să fie **INVALID**)
-- Test cu identitate falsă (trebuie să fie **INVALID**)
-- Semnarea și verificarea unui mesaj de la Bob către Alice
+- System parameter generation by the CA
+- Registration of users Alice and Bob
+- Alice signing a message
+- Bob verifying the signature
+- Test with a modified message (must be **INVALID**)
+- Test with a fake identity (must be **INVALID**)
+- Signing and verification of a message from Bob to Alice
 
-### B) Benchmark — comparație performanță GQ vs RSA
+### B) Benchmark — GQ vs RSA performance comparison
 
 ```bash
 java GQBenchmark
 ```
 
-Va afișa:
+It will display:
 
-- Timpi de execuție pentru chei de **1024 biți**
-- Timpi de execuție pentru chei de **2048 biți**
-- Comparație între GQ, RSA Signature și RSA Encryption
+- Execution times for **1024-bit** keys
+- Execution times for **2048-bit** keys
+- Comparison between GQ, RSA Signature and RSA Encryption
 
 ---
 
-## 5. Rezultate așteptate
+## 5. Expected results
 
-### A) La rularea `GQDemo`
+### A) When running `GQDemo`
 
 ```text
 
- DEMONSTRATIE SCHEMA GUILLOU-QUISQUATER
+ GUILLOU-QUISQUATER SCHEME DEMONSTRATION
 
-[PASUL 1] SETUP SISTEM - Autoritatea de Certificare (CA)
+[STEP 1] SYSTEM SETUP - Certification Authority (CA)
 ...
-[PASUL 5] BOB VERIFICA SEMNATURA LUI ALICE
-Rezultat verificare: VALIDA
+[STEP 5] BOB VERIFIES ALICE'S SIGNATURE
+Verification result: VALID
 
-[PASUL 6] TEST INTEGRITATE - Mesaj Modificat
-Rezultat verificare: INVALIDA
-Corect! Mesajul modificat a fost detectat.
+[STEP 6] INTEGRITY TEST - Modified Message
+Verification result: INVALID
+Correct! The modified message was detected.
 
-[PASUL 7] TEST AUTENTICITATE - Identitate Falsa
-Rezultat verificare: INVALIDA
-Corect! Identitatea falsa a fost detectata.
+[STEP 7] AUTHENTICITY TEST - Fake Identity
+Verification result: INVALID
+Correct! The fake identity was detected.
 ...
-TOATE TESTELE AU FOST EXECUTATE CU SUCCES!
+ALL TESTS EXECUTED SUCCESSFULLY!
 ```
 
-### B) La rularea `GQBenchmark`
+### B) When running `GQBenchmark`
 
 ```text
 
  BENCHMARK GUILLOU-QUISQUATER vs RSA
 
 
---- Dimensiune cheie: 1024 biti ---
+--- Key size: 1024 bits ---
 
 GUILLOU-QUISQUATER:
-  Setup sistem:           XXX ms
-  Generare certificat:    XXX ms
-  Semnare (medie):        XXX ms
-  Verificare (medie):     XXX ms
-  Verificare valida:      DA
-  Dimensiune semnatura:   XXX bytes
+  System setup:           XXX ms
+  Certificate generation: XXX ms
+  Signing (average):      XXX ms
+  Verification (average): XXX ms
+  Verification valid:     YES
+  Signature size:         XXX bytes
 
 RSA SIGNATURE (SHA256withRSA):
-  Generare chei:          XXX ms
-  Semnare (medie):        XXX ms
-  Verificare (medie):     XXX ms
+  Key generation:         XXX ms
+  Signing (average):      XXX ms
+  Verification (average): XXX ms
   ...
 ```
 
 ---
 
-## 6. Structura codului
+## 6. Code structure
 
 ### `GQSignature.java`
 
-Clasa principală cu doi constructori:
+Main class with two constructors:
 
-- **`GQSignature(int bitLength, int k)`** — pentru Autoritatea de Certificare (CA)
-  Generează parametrii: `p`, `q` (prime), `n = p·q`, `v = 65537`, `s = v⁻¹ mod φ(n)`
-- **`GQSignature(BigInteger n, BigInteger v, int k)`** — pentru utilizatori obișnuiți
-  Primește doar parametrii publici
+- **`GQSignature(int bitLength, int k)`** — for the Certification Authority (CA)
+  Generates the parameters: `p`, `q` (primes), `n = p·q`, `v = 65537`, `s = v⁻¹ mod φ(n)`
+- **`GQSignature(BigInteger n, BigInteger v, int k)`** — for regular users
+  Receives only the public parameters
 
-**Metode principale:**
+**Main methods:**
 
-| Metodă                                                            | Descriere                       |
-| ----------------------------------------------------------------- | ------------------------------- |
-| `generareCertificat(String identitate)`                           | Calculează `J = H(ID)^s mod n`  |
-| `semnare(String mesaj, String identitate, BigInteger certificat)` | Generează semnătura GQ          |
-| `verificare(String mesaj, Semnatura sem)`                         | Verifică validitatea semnăturii |
+| Method                                                        | Description                        |
+| ------------------------------------------------------------- | ---------------------------------- |
+| `generateCertificate(String identity)`                        | Computes `J = H(ID)^s mod n`       |
+| `sign(String message, String identity, BigInteger certificate)` | Generates the GQ signature       |
+| `verify(String message, Signature sig)`                       | Checks the validity of the signature |
 
 ### `GQDemo.java`
 
-Demonstrație pas cu pas a protocolului complet.
-Testează corectitudinea prin scenarii pozitive și negative.
+Step-by-step demonstration of the complete protocol.
+Tests correctness through positive and negative scenarios.
 
 ### `GQBenchmark.java`
 
-Măsurători de performanță cu **warmup JVM** și **100 de iterații**.
-Compară GQ cu `java.security.Signature` (RSA) și `javax.crypto.Cipher` (RSA).
+Performance measurements with **JVM warmup** and **100 iterations**.
+Compares GQ with `java.security.Signature` (RSA) and `javax.crypto.Cipher` (RSA).
