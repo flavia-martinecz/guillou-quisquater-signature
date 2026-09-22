@@ -130,7 +130,11 @@ guillou-quisquater-signature/
 │   ├── GQBenchmark_1.jpg        # benchmark, run 1 of 3
 │   ├── GQBenchmark_2.jpg        # benchmark, run 2 of 3
 │   └── GQBenchmark_3.jpg        # benchmark, run 3 of 3
+├── .github/workflows/
+│   ├── build.yml                # compiles and runs GQDemo on JDK 11, 17, 21
+│   └── codeql.yml               # CodeQL security scan
 ├── .gitignore
+├── LICENSE
 └── README.md
 ```
 
@@ -192,8 +196,8 @@ If `javac` is not available, install the full JDK:
 ## 6. Quick start
 
 ```bash
-git clone https://github.com/flavia-martinecz/schema-semnatura-digitala-Guillou-Quisquater.git
-cd schema-semnatura-digitala-Guillou-Quisquater/Implementation
+git clone https://github.com/flavia-martinecz/guillou-quisquater-signature.git
+cd guillou-quisquater-signature/Implementation
 javac -encoding UTF-8 *.java
 java GQDemo        # the protocol, step by step
 java GQBenchmark   # GQ vs RSA timings (takes a few seconds)
@@ -555,4 +559,6 @@ This is an **academic implementation, written to be read and understood — not 
 
 ## 14. License
 
-Academic project — provided as-is for educational and research purposes. The code is meant for study and experimentation, **not for protecting real data**; see [Security notes and limitations](#11-security-notes-and-limitations).
+Released under the **MIT License** — see [`LICENSE`](LICENSE) for the full text. In short: you may use, copy, modify and redistribute this code, including commercially, provided the copyright notice is kept. It comes with no warranty of any kind.
+
+This is an academic project: the code is meant for study and experimentation, **not for protecting real data**. The permissive licence grants you the legal right to reuse it; it says nothing about whether doing so is a good idea. Read [Security notes and limitations](#11-security-notes-and-limitations) first.
