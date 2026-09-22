@@ -1,0 +1,81 @@
+name: codeql
+
+# CodeQL scans the Java sources and reports to the Security -> Code scanning tab.
+#
+# Scope, so a green tab is not mistaken for more than it is: CodeQL's Java
+# queries look for application-level flaws - injection, path traversal, unsafe
+# deserialization, hardcoded credentials. They do NOT evaluate the correctness
+# or the strength of a cryptographic construction. The weaknesses listed under
+# "Security notes and limitations" in the README (no domain separation in the
+# challenge hash, non-constant-time modPow, unvalidated primes) are design-level
+# and will not appear here. Expect few or no alerts.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "Docs/**"
+      - "Tests/**"
+      - "**/*.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "Docs/**"
+      - "Tests/**"
+      - "**/*.md"
+  schedule:
+    # Weekly, Monday 06:00 UTC. The code is unlikely to change often, but the
+    # CodeQL query packs do, so a periodic re-scan can surface something the
+    # original run had no query for.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze Java
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      # A job-level permissions block REPLACES the workflow-level one rather
+      # than extending it: every scope left out here is set to none. So
+      # contents: read has to be repeated, otherwise checkout loses its access.
+      contents: read
+      # Required to upload the results to the Security tab.
+      security-events: write
+      # Required by CodeQL to read workflow run metadata on private repositories.
+      actions: read
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@3ea06614dafe36dec890db3446326e0d40ce53d4 # v3.38.1
+        with:
+          languages: java-kotlin
+          # Adds the maintainability and precision-adjacent queries on top of
+          # the default set. On a codebase this small the extra runtime is free.
+          queries: security-and-quality
+
+      - name: Build
+        # The project has no build tool, so CodeQL's autobuild has nothing to
+        # detect. Compiling explicitly is both simpler and more reliable, and it
+        # is the same command the build workflow and the README use.
+        run: javac -encoding UTF-8 -d out Implementation/*.java
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@3ea06614dafe36dec890db3446326e0d40ce53d4 # v3.38.1
+        with:
+          category: "/language:java-kotlin"
