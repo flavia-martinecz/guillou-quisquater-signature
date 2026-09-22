@@ -1,0 +1,120 @@
+name: build
+
+on:
+  push:
+    paths-ignore:
+      - "Docs/**"
+      - "Tests/**"
+      - "**/*.md"
+  pull_request:
+    paths-ignore:
+      - "Docs/**"
+      - "Tests/**"
+      - "**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  demo:
+    name: GQDemo on JDK ${{ matrix.java }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # The README claims "JDK 11 or newer". Building on 11, 17 and 21 is what
+    # keeps that claim honest.
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ["11", "17", "21"]
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+
+      - name: Compile
+        # Deliberately the exact command documented in the README, so that CI
+        # fails if the documented build stops working.
+        run: javac -encoding UTF-8 -d out Implementation/*.java
+
+      - name: Run GQDemo
+        run: java -cp out GQDemo > demo.out 2> demo.err
+
+      - name: Show the output
+        run: cat demo.out
+
+      - name: Check the protocol results
+        run: |
+          fail() {
+            echo "::error::$1"
+            echo '----- stdout -----'; cat demo.out
+            echo '----- stderr -----'; cat demo.err
+            exit 1
+          }
+
+          # GQDemo prints "All tests completed successfully!" unconditionally and
+          # returns exit code 0 even when a verification comes out wrong or an
+          # exception is caught, so neither of those proves anything. The real
+          # pass criterion is the VALID / INVALID / INVALID / VALID pattern:
+          # steps 5 and 9 must accept, steps 6 and 7 must reject.
+          valid=$(grep -c '\[OK\] VALID' demo.out || true)
+          rejected=$(grep -c '\[FAIL\] INVALID (as expected)' demo.out || true)
+
+          [ "$valid" -eq 2 ] || fail "expected 2 accepted signatures (steps 5 and 9), found $valid"
+          [ "$rejected" -eq 2 ] || fail "expected 2 rejected forgeries (steps 6 and 7), found $rejected"
+          [ ! -s demo.err ] || fail "GQDemo wrote to stderr, so an exception was caught and swallowed"
+
+          echo "Steps 5 and 9 accepted, steps 6 and 7 rejected - protocol behaved correctly."
+
+  benchmark:
+    name: GQBenchmark (JDK 21)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Compile
+        run: javac -encoding UTF-8 -d out Implementation/*.java
+
+      - name: Run GQBenchmark
+        run: java -cp out GQBenchmark > bench.out 2> bench.err
+
+      - name: Show the output
+        # The timings themselves are not asserted on - a shared CI runner is far
+        # too noisy for that. This job exists to prove the scheme still verifies
+        # correctly at 2048 bits, which GQDemo (1024-bit only) never exercises.
+        run: cat bench.out
+
+      - name: Check every verification succeeded
+        run: |
+          fail() {
+            echo "::error::$1"
+            echo '----- stdout -----'; cat bench.out
+            echo '----- stderr -----'; cat bench.err
+            exit 1
+          }
+
+          # Two verifications (GQ and RSA) for each of the two key sizes.
+          accepted=$(grep -c 'Verification valid: *YES' bench.out || true)
+          refused=$(grep -c 'Verification valid: *NO' bench.out || true)
+
+          [ "$accepted" -eq 4 ] || fail "expected 4 successful verifications, found $accepted"
+          [ "$refused" -eq 0 ] || fail "$refused verification(s) failed"
+          [ ! -s bench.err ] || fail "GQBenchmark wrote to stderr, so an exception was caught and swallowed"
+
+          echo "All four verifications passed (GQ and RSA, at 1024 and 2048 bits)."
