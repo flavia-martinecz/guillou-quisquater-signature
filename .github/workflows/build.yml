@@ -6,11 +6,13 @@ on:
       - "Docs/**"
       - "Tests/**"
       - "**/*.md"
+      - "LICENSE"
   pull_request:
     paths-ignore:
       - "Docs/**"
       - "Tests/**"
       - "**/*.md"
+      - "LICENSE"
   workflow_dispatch:
 
 permissions:

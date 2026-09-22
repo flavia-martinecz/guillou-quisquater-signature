@@ -24,12 +24,14 @@ on:
       - "Docs/**"
       - "Tests/**"
       - "**/*.md"
+      - "LICENSE"
   pull_request:
     branches: [main]
     paths-ignore:
       - "Docs/**"
       - "Tests/**"
       - "**/*.md"
+      - "LICENSE"
   schedule:
     # Weekly, Monday 06:00 UTC. The code is unlikely to change often, but the
     # CodeQL query packs do, so a periodic re-scan can surface something the
